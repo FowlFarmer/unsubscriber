@@ -424,7 +424,7 @@ export default function Sweeper() {
         </div>
 
         <p className="global-stats-note" aria-label="Community totals">
-          Community stats:{displayCount(subscriptionsScoured)} subscriptions scoured and {displayCount(subscriptionsRemoved)} removed globally!
+          Community stats: {displayCount(subscriptionsScoured)} subscriptions scoured and {displayCount(subscriptionsRemoved)} removed globally!
         </p>
 
         {snapshotMeta && (
