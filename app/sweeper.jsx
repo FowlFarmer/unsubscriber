@@ -199,11 +199,6 @@ export default function Sweeper() {
       setMessage("Sign in before fetching subscriptions.");
       return;
     }
-    if (subscriptions.length) {
-      setMatches(filterSubscriptions(subscriptions, pattern, flags));
-      setMessage(`Using ${subscriptions.length} subscriptions already cached in this browser.`);
-      return;
-    }
     setBusy(true);
     setMessage("Fetching this month’s subscription snapshot...");
     try {
@@ -361,7 +356,7 @@ export default function Sweeper() {
 
         <div className="snapshot-actions">
           <button className="button primary" type="button" disabled={busy || !status?.authenticated} onClick={fetchSnapshot}>
-            {subscriptions.length ? "Use cached snapshot" : "Fetch monthly snapshot"}
+            Fetch monthly snapshot
           </button>
         </div>
 
