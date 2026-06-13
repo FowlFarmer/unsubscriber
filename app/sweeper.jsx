@@ -423,16 +423,9 @@ export default function Sweeper() {
           </div>
         </div>
 
-        <div className="global-stats-band" aria-label="Community totals">
-          <div>
-            <span className="metric-value">{displayCount(subscriptionsScoured)}</span>
-            <span className="metric-label">subscriptions scoured</span>
-          </div>
-          <div>
-            <span className="metric-value">{displayCount(subscriptionsRemoved)}</span>
-            <span className="metric-label">subscriptions removed</span>
-          </div>
-        </div>
+        <p className="global-stats-note" aria-label="Community totals">
+          Community stats:{displayCount(subscriptionsScoured)} subscriptions scoured and {displayCount(subscriptionsRemoved)} removed globally!
+        </p>
 
         {snapshotMeta && (
           <div className="cache-band">

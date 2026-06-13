@@ -320,29 +320,11 @@ h1 {
   font-size: 0.9rem;
 }
 
-.global-stats-band {
-  margin-top: 14px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.55);
-}
-
-.global-stats-band > div {
-  padding: 14px 18px;
-  min-width: 0;
-}
-
-.global-stats-band > div + div {
-  border-left: 1px solid var(--line);
-}
-
-.global-stats-band .metric-value {
-  font-size: 1.65rem;
-}
-
-.global-stats-band .metric-label {
-  font-size: 0.82rem;
+.global-stats-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .danger-band {
@@ -508,7 +490,6 @@ th {
   }
 
   .metrics,
-  .global-stats-band,
   .danger-band,
   .control-grid {
     grid-template-columns: 1fr;
@@ -516,14 +497,9 @@ th {
     align-items: stretch;
   }
 
-  .metrics > div + div,
-  .global-stats-band > div + div {
+  .metrics > div + div {
     border-left: 0;
     border-top: 1px solid var(--ink);
-  }
-
-  .global-stats-band > div + div {
-    border-top-color: var(--line);
   }
 
   .confirm-row {
