@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const dbName = "subscription-sweeper";
 const storeName = "snapshots";
@@ -98,6 +98,7 @@ function channelUrl(subscription) {
 }
 
 export default function Sweeper() {
+  const helpRef = useRef(null);
   const [status, setStatus] = useState(null);
   const [pattern, setPattern] = useState("");
   const [flags, setFlags] = useState("i");
@@ -151,6 +152,22 @@ export default function Sweeper() {
       })
       .catch((error) => setMessage(`Could not read browser cache: ${error.message}`));
   }, [status?.accountCacheKey]);
+
+  useEffect(() => {
+    if (!helpOpen) return;
+    function closeFromOutside(event) {
+      if (!helpRef.current?.contains(event.target)) setHelpOpen(false);
+    }
+    function closeFromEscape(event) {
+      if (event.key === "Escape") setHelpOpen(false);
+    }
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromEscape);
+    };
+  }, [helpOpen]);
 
   useEffect(() => {
     if (!subscriptions.length) {
@@ -291,25 +308,24 @@ export default function Sweeper() {
   return (
     <main className="shell">
       <section className="command-panel" aria-labelledby="app-title">
-        <div className="help-wrap">
+        <div className="help-wrap" ref={helpRef}>
           <button className="help-button" type="button" aria-expanded={helpOpen} aria-controls="quota-help" onClick={() => setHelpOpen((open) => !open)}>
             ?
           </button>
           {helpOpen && (
             <div className="help-popover" id="quota-help" role="dialog" aria-label="Quota and cache explanation">
               <strong>What this does</strong>
-              <p>Sign in, fetch your subscription snapshot, then type a regex to instantly narrow the list of channels.</p>
-              <p>Use the row delete buttons or confirmed bulk delete to unsubscribe through the YouTube API. Channel names and thumbnails are links, so you can always open YouTube and unsubscribe manually.</p>
+              <p>Sign in with your Google account, load your YouTube subscriptions, then type a pattern to narrow the list instantly.</p>
+              <p>You can remove one channel at a time, or confirm a bulk unsubscribe. Channel names and thumbnails open YouTube, so you can always unsubscribe manually too.</p>
               <strong className="help-section-title">Monthly quota</strong>
-              <p>The app can fetch up to {snapshotLimit.toLocaleString()} subscriptions once per Google account each UTC calendar month.</p>
-              <p>The fetched list is stored in this browser’s local cache, not in the app database. Regex searches run against that browser cache.</p>
-              <p>If you use another browser after spending the monthly fetch, that browser may not have the cached list and cannot fetch again until next month.</p>
-              <p>Each Google account also gets {deleteLimit} API-powered unsubscribe deletes per month. If you run out, open matched channel links and unsubscribe manually on YouTube.</p>
+              <p>Your Google account can load up to {snapshotLimit.toLocaleString()} subscriptions once each calendar month.</p>
+              <p>Your loaded list is saved in this browser, on this device. The app does not store that list in its database, and searches happen locally.</p>
+              <p>If you switch browsers or devices after using your monthly load, that new browser may not have your saved list and will need to wait until next month.</p>
+              <p>Your Google account also gets {deleteLimit} in-app unsubscribe actions each month. If you run out, you can still open the channel links and unsubscribe on YouTube.</p>
             </div>
           )}
         </div>
         <div className="masthead">
-          <p className="eyebrow">Local YouTube API Tool</p>
           <h1 id="app-title">Subscription Sweeper</h1>
           <a className="docs-link" href="https://developers.google.com/youtube/v3/docs/subscriptions/delete" target="_blank" rel="noreferrer">
             API docs
@@ -411,10 +427,10 @@ export default function Sweeper() {
           <table>
             <thead>
               <tr>
+                <th>Action</th>
                 <th>Channel</th>
                 <th>Channel ID</th>
                 <th>Subscription ID</th>
-                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -425,6 +441,11 @@ export default function Sweeper() {
               )}
               {visibleMatches.map((match) => (
                 <tr key={match.subscriptionId}>
+                  <td>
+                    <button className="row-action danger" type="button" disabled={busy || deleteQuotaExhausted || deletingOne === match.subscriptionId} onClick={() => unsubscribeOne(match)}>
+                      {deletingOne === match.subscriptionId ? "Deleting..." : "Delete"}
+                    </button>
+                  </td>
                   <td>
                     <div className="channel-cell">
                       <a href={channelUrl(match)} target="_blank" rel="noreferrer" aria-label={`Open ${match.title} on YouTube`}>
@@ -440,11 +461,6 @@ export default function Sweeper() {
                   </td>
                   <td className="mono">{match.channelId}</td>
                   <td className="mono">{match.subscriptionId}</td>
-                  <td>
-                    <button className="row-action danger" type="button" disabled={busy || deleteQuotaExhausted || deletingOne === match.subscriptionId} onClick={() => unsubscribeOne(match)}>
-                      {deletingOne === match.subscriptionId ? "Deleting..." : "Delete"}
-                    </button>
-                  </td>
                 </tr>
               ))}
               {bottomSpacerHeight > 0 && (
