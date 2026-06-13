@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { assertConfigured, errorResponse, getConfig } from "../../../lib/youtube";
+import { assertConfigured, errorResponse, getConfig, setOauthStateCookie } from "../../../lib/youtube";
 
 export const runtime = "nodejs";
 
@@ -19,12 +19,7 @@ export async function GET() {
     authUrl.searchParams.set("state", state);
 
     const response = NextResponse.redirect(authUrl);
-    response.cookies.set("youtube_oauth_state", state, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 10 * 60,
-    });
+    setOauthStateCookie(response, state);
     return response;
   } catch (error) {
     return errorResponse(error);
