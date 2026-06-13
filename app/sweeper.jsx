@@ -118,7 +118,6 @@ export default function Sweeper() {
   const ready = Boolean(status?.configured && status?.authenticated);
   const deleteQuotaExhausted = ready && deleteRemaining <= 0;
   const canDelete = confirmation.trim() === String(matches.length) && matches.length > 0 && matches.length <= deleteRemaining && !busy;
-  const searchButtonText = subscriptions.length ? "Search cached list" : "Fetch monthly snapshot";
   const visibleStart = Math.max(0, Math.floor(scrollTop / rowHeight) - overscanRows);
   const visibleCount = Math.ceil(virtualViewportHeight / rowHeight) + overscanRows * 2;
   const visibleMatches = matches.slice(visibleStart, visibleStart + visibleCount);
@@ -153,42 +152,59 @@ export default function Sweeper() {
       .catch((error) => setMessage(`Could not read browser cache: ${error.message}`));
   }, [status?.accountCacheKey]);
 
-  async function preview(event) {
-    event.preventDefault();
-    if (!acknowledged) {
-      setMessage("Check the acknowledgement before previewing matches.");
+  useEffect(() => {
+    if (!subscriptions.length) {
+      setMatches([]);
       return;
     }
-    if (!status?.authenticated) {
-      setMessage("Sign in before fetching or searching subscriptions.");
-      return;
-    }
-    setBusy(true);
-    setMessage(subscriptions.length ? "Searching cached subscriptions..." : "Fetching this month’s subscription snapshot...");
     try {
-      let source = subscriptions;
-      if (!source.length) {
-        const snapshot = await api("/api/subscriptions/snapshot", { method: "POST" });
-        source = snapshot.subscriptions;
-        const cached = {
-          accountCacheKey: snapshot.accountCacheKey,
-          fetchedAt: snapshot.fetchedAt,
-          period: snapshot.period,
-          truncated: snapshot.truncated,
-          subscriptions: source,
-        };
-        await writeCachedSnapshot(cached);
-        setSubscriptions(source);
-        setSnapshotMeta(cached);
-      }
-      const nextMatches = filterSubscriptions(source, pattern, flags);
+      const nextMatches = filterSubscriptions(subscriptions, pattern, flags);
       setMatches(nextMatches);
       setScrollTop(0);
       setConfirmation("");
       setMessage(
         nextMatches.length
-          ? `Found ${nextMatches.length} matching channel title${nextMatches.length === 1 ? "" : "s"} in ${source.length} cached subscriptions.`
-          : `No channel titles matched that regex in ${source.length} cached subscriptions.`,
+          ? `Showing ${nextMatches.length} matching channel title${nextMatches.length === 1 ? "" : "s"} from ${subscriptions.length} cached subscriptions.`
+          : `No channel titles match that regex in ${subscriptions.length} cached subscriptions.`,
+      );
+    } catch (error) {
+      setMatches([]);
+      setMessage(error.message);
+    }
+  }, [pattern, flags, subscriptions]);
+
+  async function fetchSnapshot() {
+    if (!acknowledged) {
+      setMessage("Check the acknowledgement before fetching your subscription snapshot.");
+      return;
+    }
+    if (!status?.authenticated) {
+      setMessage("Sign in before fetching subscriptions.");
+      return;
+    }
+    if (subscriptions.length) {
+      setMatches(filterSubscriptions(subscriptions, pattern, flags));
+      setMessage(`Using ${subscriptions.length} subscriptions already cached in this browser.`);
+      return;
+    }
+    setBusy(true);
+    setMessage("Fetching this month’s subscription snapshot...");
+    try {
+      const snapshot = await api("/api/subscriptions/snapshot", { method: "POST" });
+      const cached = {
+        accountCacheKey: snapshot.accountCacheKey,
+        fetchedAt: snapshot.fetchedAt,
+        period: snapshot.period,
+        truncated: snapshot.truncated,
+        subscriptions: snapshot.subscriptions,
+      };
+      await writeCachedSnapshot(cached);
+      setSubscriptions(snapshot.subscriptions);
+      setSnapshotMeta(cached);
+      setScrollTop(0);
+      setConfirmation("");
+      setMessage(
+        `Fetched and cached ${snapshot.subscriptions.length} subscriptions${snapshot.truncated ? `, capped at ${snapshotLimit.toLocaleString()}` : ""}.`,
       );
     } catch (error) {
       if (error.detail?.reason === "SNAPSHOT_QUOTA_USED") {
@@ -281,7 +297,10 @@ export default function Sweeper() {
           </button>
           {helpOpen && (
             <div className="help-popover" id="quota-help" role="dialog" aria-label="Quota and cache explanation">
-              <strong>Monthly quota</strong>
+              <strong>What this does</strong>
+              <p>Sign in, fetch your subscription snapshot, then type a regex to instantly narrow the list of channels.</p>
+              <p>Use the row delete buttons or confirmed bulk delete to unsubscribe through the YouTube API. Channel names and thumbnails are links, so you can always open YouTube and unsubscribe manually.</p>
+              <strong className="help-section-title">Monthly quota</strong>
               <p>The app can fetch up to {snapshotLimit.toLocaleString()} subscriptions once per Google account each UTC calendar month.</p>
               <p>The fetched list is stored in this browser’s local cache, not in the app database. Regex searches run against that browser cache.</p>
               <p>If you use another browser after spending the monthly fetch, that browser may not have the cached list and cannot fetch again until next month.</p>
@@ -324,7 +343,13 @@ export default function Sweeper() {
           </button>
         </div>
 
-        <form className="regex-form" onSubmit={preview}>
+        <div className="snapshot-actions">
+          <button className="button primary" type="button" disabled={busy || !status?.authenticated} onClick={fetchSnapshot}>
+            {subscriptions.length ? "Use cached snapshot" : "Fetch monthly snapshot"}
+          </button>
+        </div>
+
+        <div className="regex-form">
           <label htmlFor="pattern">Channel title regex</label>
           <div className="regex-box">
             <span>/</span>
@@ -336,13 +361,10 @@ export default function Sweeper() {
           <div className="control-grid">
             <label className="check">
               <input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />
-              <span>I understand matching channels can be unsubscribed.</span>
+              <span>I understand this fetch uses my monthly subscription snapshot quota.</span>
             </label>
-            <button className="button primary" type="submit" disabled={busy}>
-              {searchButtonText}
-            </button>
           </div>
-        </form>
+        </div>
       </section>
 
       <section className="results-panel" aria-live="polite">

@@ -108,6 +108,11 @@ input {
   line-height: 1.25;
 }
 
+.help-section-title {
+  display: block;
+  margin-top: 14px;
+}
+
 .eyebrow {
   margin: 0 0 8px;
   color: var(--oxide);
@@ -218,7 +223,7 @@ h1 {
 }
 
 .regex-form {
-  margin-top: 34px;
+  margin-top: 20px;
 }
 
 .regex-form > label {
@@ -260,6 +265,15 @@ h1 {
   margin-top: 16px;
   align-items: stretch;
   justify-content: space-between;
+}
+
+.snapshot-actions {
+  margin-top: 34px;
+  display: flex;
+}
+
+.snapshot-actions .button {
+  width: 100%;
 }
 
 .check {
