@@ -99,8 +99,21 @@ function channelUrl(subscription) {
   return subscription.channelUrl || `https://www.youtube.com/channel/${subscription.channelId}`;
 }
 
+function trackManualRemoval(subscriptionId, setStatus, trackedManualRemovalsRef) {
+  if (trackedManualRemovalsRef.current.has(subscriptionId)) return;
+  trackedManualRemovalsRef.current.add(subscriptionId);
+  api("/api/stats/manual-removal", { method: "POST" })
+    .then((payload) => {
+      setStatus((current) => (current ? { ...current, globalStats: payload.globalStats } : current));
+    })
+    .catch(() => {
+      trackedManualRemovalsRef.current.delete(subscriptionId);
+    });
+}
+
 export default function Sweeper() {
   const helpRef = useRef(null);
+  const trackedManualRemovalsRef = useRef(new Set());
   const [status, setStatus] = useState(null);
   const [pattern, setPattern] = useState("");
   const [flags, setFlags] = useState("i");
@@ -118,6 +131,8 @@ export default function Sweeper() {
   const deleteRemaining = status?.deleteQuota?.remaining ?? 0;
   const deleteLimit = status?.deleteQuota?.limit ?? 25;
   const snapshotLimit = status?.snapshotLimit ?? 2000;
+  const subscriptionsScoured = status?.globalStats?.subscriptionsScoured ?? 0;
+  const subscriptionsRemoved = status?.globalStats?.subscriptionsRemoved ?? 0;
   const ready = Boolean(status?.configured && status?.authenticated);
   const deleteQuotaExhausted = ready && deleteRemaining <= 0;
   const canDelete = confirmation.trim() === String(matches.length) && matches.length > 0 && matches.length <= deleteRemaining && !busy;
@@ -220,6 +235,9 @@ export default function Sweeper() {
       setMessage(
         `Fetched and cached ${snapshot.subscriptions.length} subscriptions${snapshot.truncated ? `, capped at ${snapshotLimit.toLocaleString()}` : ""}.`,
       );
+      if (snapshot.globalStats) {
+        setStatus((current) => (current ? { ...current, globalStats: snapshot.globalStats } : current));
+      }
     } catch (error) {
       if (error.detail?.reason === "SNAPSHOT_QUOTA_USED") {
         setMessage("This Google account already used its monthly fetch, and this browser has no cached subscription list. Use the browser where you fetched the list, or wait until next month.");
@@ -250,7 +268,9 @@ export default function Sweeper() {
       setSubscriptions((current) => current.filter((subscription) => !deletedIds.includes(subscription.subscriptionId)));
       setMatches((current) => current.filter((match) => !deletedIds.includes(match.subscriptionId)));
       if (status?.accountCacheKey) await removeCachedSubscriptions(status.accountCacheKey, deletedIds);
-      setStatus((current) => (current ? { ...current, deleteQuota: result.deleteQuota } : current));
+      setStatus((current) =>
+        current ? { ...current, deleteQuota: result.deleteQuota, globalStats: result.globalStats ?? current.globalStats } : current,
+      );
       setConfirmation("");
     } catch (error) {
       setMessage(error.message);
@@ -273,7 +293,9 @@ export default function Sweeper() {
       setSubscriptions((current) => current.filter((candidate) => candidate.subscriptionId !== match.subscriptionId));
       setMatches((current) => current.filter((candidate) => candidate.subscriptionId !== match.subscriptionId));
       if (status?.accountCacheKey) await removeCachedSubscriptions(status.accountCacheKey, [match.subscriptionId]);
-      setStatus((current) => (current ? { ...current, deleteQuota: result.deleteQuota } : current));
+      setStatus((current) =>
+        current ? { ...current, deleteQuota: result.deleteQuota, globalStats: result.globalStats ?? current.globalStats } : current,
+      );
       setConfirmation("");
       setMessage(`Unsubscribed from ${match.title}.`);
     } catch (error) {
@@ -396,6 +418,17 @@ export default function Sweeper() {
           </div>
         </div>
 
+        <div className="global-stats-band" aria-label="Community totals">
+          <div>
+            <span className="metric-value">{displayCount(subscriptionsScoured)}</span>
+            <span className="metric-label">subscriptions scoured</span>
+          </div>
+          <div>
+            <span className="metric-value">{displayCount(subscriptionsRemoved)}</span>
+            <span className="metric-label">subscriptions removed</span>
+          </div>
+        </div>
+
         {snapshotMeta && (
           <div className="cache-band">
             Cached {snapshotMeta.subscriptions.length} subscriptions from {new Date(snapshotMeta.fetchedAt).toLocaleString()}
@@ -445,11 +478,23 @@ export default function Sweeper() {
                   </td>
                   <td>
                     <div className="channel-cell">
-                      <a href={channelUrl(match)} target="_blank" rel="noreferrer" aria-label={`Open ${match.title} on YouTube`}>
+                      <a
+                        href={channelUrl(match)}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Open ${match.title} on YouTube`}
+                        onClick={() => trackManualRemoval(match.subscriptionId, setStatus, trackedManualRemovalsRef)}
+                      >
                         {match.thumbnail ? <img src={match.thumbnail} alt="" /> : <span className="thumbnail-placeholder" />}
                       </a>
                       <div>
-                        <a className="channel-title channel-link" href={channelUrl(match)} target="_blank" rel="noreferrer">
+                        <a
+                          className="channel-title channel-link"
+                          href={channelUrl(match)}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => trackManualRemoval(match.subscriptionId, setStatus, trackedManualRemovalsRef)}
+                        >
                           {match.title}
                         </a>
                         <div className="channel-description">{match.description || "No description"}</div>
