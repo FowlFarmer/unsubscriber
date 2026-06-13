@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { errorResponse, exchangeCode, getConfig } from "../../../lib/youtube";
+import { errorResponse, exchangeCode, getConfig, setTokenCookie } from "../../../lib/youtube";
 
 export const runtime = "nodejs";
 
@@ -21,8 +21,9 @@ export async function GET(request) {
       throw error;
     }
 
-    await exchangeCode(code);
+    const tokens = await exchangeCode(code);
     const response = NextResponse.redirect(new URL("/?signed_in=1", getConfig().origin));
+    setTokenCookie(response, tokens);
     response.cookies.delete("youtube_oauth_state");
     return response;
   } catch (error) {

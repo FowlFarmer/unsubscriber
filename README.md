@@ -13,7 +13,7 @@ The app uses the YouTube Data API `subscriptions.list` endpoint to fetch your su
    https://unsubscriber.tzhu.dev/oauth2/callback
    ```
 
-3. Copy `.env.example` to `.env` and fill in `YOUTUBE_CLIENT_ID` and `YOUTUBE_CLIENT_SECRET`.
+3. Set `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, `TOKEN_SECRET`, and `APP_ORIGIN` in your deployment environment. For local development, copy `.env.example` to `.env`.
 4. Install dependencies:
 
    ```bash
@@ -30,7 +30,7 @@ The app uses the YouTube Data API `subscriptions.list` endpoint to fetch your su
 
 For local-only development, set `APP_ORIGIN=http://localhost:4173` and add `http://localhost:4173/oauth2/callback` as an additional redirect URI in Google Cloud.
 
-Tokens are stored locally in `.tokens/youtube.json`, which is ignored by git.
+Tokens are stored in an encrypted HttpOnly cookie. Set `TOKEN_SECRET` to a long random value in production.
 
 ## Safety Flow
 
