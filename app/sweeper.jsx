@@ -240,7 +240,12 @@ export default function Sweeper() {
       }
     } catch (error) {
       if (error.detail?.reason === "SNAPSHOT_QUOTA_USED") {
-        setMessage("This Google account already used its monthly fetch, and this browser has no cached subscription list. Use the browser where you fetched the list, or wait until next month.");
+        const hasCachedList = subscriptions.length > 0 || Boolean(snapshotMeta?.subscriptions?.length);
+        setMessage(
+          hasCachedList
+            ? "This Google account already used its monthly fetch. Keep using the cached subscription list shown below, or wait until next month for a fresh fetch."
+            : "This Google account already used its monthly fetch, and this browser has no cached subscription list. Use the browser where you fetched the list, or wait until next month.",
+        );
       } else {
         setMessage(error.message);
       }
@@ -326,24 +331,24 @@ export default function Sweeper() {
 
   return (
     <main className="shell">
+      <div className="help-wrap" ref={helpRef}>
+        <button className="help-button" type="button" aria-expanded={helpOpen} aria-controls="quota-help" onClick={() => setHelpOpen((open) => !open)}>
+          ?
+        </button>
+        {helpOpen && (
+          <div className="help-popover" id="quota-help" role="dialog" aria-label="Quota and cache explanation">
+            <strong>What this does</strong>
+            <p>Sign in with your Google account, load your YouTube subscriptions, then type a pattern to narrow the list by channel name or description.</p>
+            <p>You can remove one channel at a time, or confirm a bulk unsubscribe. Channel names and thumbnails open YouTube, so you can always unsubscribe manually too.</p>
+            <strong className="help-section-title">Monthly quota</strong>
+            <p>Your Google account can load up to {snapshotLimit.toLocaleString()} subscriptions once each calendar month.</p>
+            <p>Your loaded list is saved in this browser, on this device. The app does not store that list in its database, and searches happen locally.</p>
+            <p>If you switch browsers or devices after using your monthly load, that new browser may not have your saved list and will need to wait until next month.</p>
+            <p>Your Google account also gets {deleteLimit} in-app unsubscribe actions each month. If you run out, you can still open the channel links and unsubscribe on YouTube.</p>
+          </div>
+        )}
+      </div>
       <section className="command-panel" aria-labelledby="app-title">
-        <div className="help-wrap" ref={helpRef}>
-          <button className="help-button" type="button" aria-expanded={helpOpen} aria-controls="quota-help" onClick={() => setHelpOpen((open) => !open)}>
-            ?
-          </button>
-          {helpOpen && (
-            <div className="help-popover" id="quota-help" role="dialog" aria-label="Quota and cache explanation">
-              <strong>What this does</strong>
-              <p>Sign in with your Google account, load your YouTube subscriptions, then type a pattern to narrow the list by channel name or description.</p>
-              <p>You can remove one channel at a time, or confirm a bulk unsubscribe. Channel names and thumbnails open YouTube, so you can always unsubscribe manually too.</p>
-              <strong className="help-section-title">Monthly quota</strong>
-              <p>Your Google account can load up to {snapshotLimit.toLocaleString()} subscriptions once each calendar month.</p>
-              <p>Your loaded list is saved in this browser, on this device. The app does not store that list in its database, and searches happen locally.</p>
-              <p>If you switch browsers or devices after using your monthly load, that new browser may not have your saved list and will need to wait until next month.</p>
-              <p>Your Google account also gets {deleteLimit} in-app unsubscribe actions each month. If you run out, you can still open the channel links and unsubscribe on YouTube.</p>
-            </div>
-          )}
-        </div>
         <div className="masthead">
           <h1 id="app-title">Subscription Sweeper</h1>
           <a className="docs-link" href="https://developers.google.com/youtube/v3/docs/subscriptions/delete" target="_blank" rel="noreferrer">
