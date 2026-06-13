@@ -89,7 +89,9 @@ function filterSubscriptions(subscriptions, pattern, flags) {
   }
   return subscriptions.filter((subscription) => {
     regex.lastIndex = 0;
-    return regex.test(subscription.title);
+    if (regex.test(subscription.title)) return true;
+    regex.lastIndex = 0;
+    return regex.test(subscription.description || "");
   });
 }
 
@@ -181,8 +183,8 @@ export default function Sweeper() {
       setConfirmation("");
       setMessage(
         nextMatches.length
-          ? `Showing ${nextMatches.length} matching channel title${nextMatches.length === 1 ? "" : "s"} from ${subscriptions.length} cached subscriptions.`
-          : `No channel titles match that regex in ${subscriptions.length} cached subscriptions.`,
+          ? `Showing ${nextMatches.length} matching channel${nextMatches.length === 1 ? "" : "s"} from ${subscriptions.length} cached subscriptions.`
+          : `No channel titles or descriptions match that regex in ${subscriptions.length} cached subscriptions.`,
       );
     } catch (error) {
       setMatches([]);
@@ -310,7 +312,7 @@ export default function Sweeper() {
           {helpOpen && (
             <div className="help-popover" id="quota-help" role="dialog" aria-label="Quota and cache explanation">
               <strong>What this does</strong>
-              <p>Sign in with your Google account, load your YouTube subscriptions, then type a pattern to narrow the list instantly.</p>
+              <p>Sign in with your Google account, load your YouTube subscriptions, then type a pattern to narrow the list by channel name or description.</p>
               <p>You can remove one channel at a time, or confirm a bulk unsubscribe. Channel names and thumbnails open YouTube, so you can always unsubscribe manually too.</p>
               <strong className="help-section-title">Monthly quota</strong>
               <p>Your Google account can load up to {snapshotLimit.toLocaleString()} subscriptions once each calendar month.</p>
@@ -361,7 +363,7 @@ export default function Sweeper() {
         </div>
 
         <div className="regex-form">
-          <label htmlFor="pattern">Channel title regex</label>
+          <label htmlFor="pattern">Channel title or description regex</label>
           <div className="regex-box">
             <span>/</span>
             <input id="pattern" name="pattern" autoComplete="off" spellCheck="false" placeholder="news|clips|official" required value={pattern} onChange={(event) => setPattern(event.target.value)} />
