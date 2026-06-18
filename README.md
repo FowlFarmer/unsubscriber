@@ -90,6 +90,10 @@ The destructive bulk action is split into two steps:
 
 Per-row delete buttons unsubscribe only that channel. Successful deletes remove rows from the UI and IndexedDB cache.
 
+## Owner Dev Console
+
+A small fixed `dev` link opens an owner-only command box. The browser only sends the typed text to the backend; the backend verifies the signed-in Google account before deciding whether a command is valid.
+
 ## Commands
 
 ```bash

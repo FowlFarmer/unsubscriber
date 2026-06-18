@@ -113,6 +113,7 @@ function trackManualRemoval(subscriptionId, setStatus, trackedManualRemovalsRef)
 
 export default function Sweeper() {
   const helpRef = useRef(null);
+  const devRef = useRef(null);
   const trackedManualRemovalsRef = useRef(new Set());
   const [status, setStatus] = useState(null);
   const [pattern, setPattern] = useState("");
@@ -126,6 +127,10 @@ export default function Sweeper() {
   const [busy, setBusy] = useState(false);
   const [deletingOne, setDeletingOne] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
+  const [devCommand, setDevCommand] = useState("");
+  const [devMessage, setDevMessage] = useState("");
+  const [devBusy, setDevBusy] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
 
   const deleteRemaining = status?.deleteQuota?.remaining ?? 0;
@@ -185,6 +190,22 @@ export default function Sweeper() {
       document.removeEventListener("keydown", closeFromEscape);
     };
   }, [helpOpen]);
+
+  useEffect(() => {
+    if (!devOpen) return;
+    function closeFromOutside(event) {
+      if (!devRef.current?.contains(event.target)) setDevOpen(false);
+    }
+    function closeFromEscape(event) {
+      if (event.key === "Escape") setDevOpen(false);
+    }
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromEscape);
+    };
+  }, [devOpen]);
 
   useEffect(() => {
     if (!subscriptions.length) {
@@ -329,6 +350,37 @@ export default function Sweeper() {
     }
   }
 
+  async function submitDevCommand(event) {
+    event.preventDefault();
+    const command = devCommand.trim();
+    if (!command) return;
+
+    setDevBusy(true);
+    setDevMessage("Running...");
+    try {
+      const result = await api("/api/dev-command", {
+        method: "POST",
+        body: JSON.stringify({ command }),
+      });
+      setDevMessage(result.message || "Done.");
+      setDevCommand("");
+      setStatus((current) =>
+        current
+          ? {
+              ...current,
+              deleteQuota: result.deleteQuota ?? current.deleteQuota,
+              globalStats: result.globalStats ?? current.globalStats,
+            }
+          : current,
+      );
+      await refreshStatus();
+    } catch (error) {
+      setDevMessage(error.message);
+    } finally {
+      setDevBusy(false);
+    }
+  }
+
   return (
     <main className="shell">
       <div className="help-wrap" ref={helpRef}>
@@ -347,6 +399,28 @@ export default function Sweeper() {
             <p>Your Google account also gets {deleteLimit} in-app unsubscribe actions each month. If you run out, you can still open the channel links and unsubscribe on YouTube.</p>
           </div>
         )}
+      </div>
+      <div className="dev-wrap" ref={devRef}>
+        {devOpen && (
+          <form className="dev-panel" onSubmit={submitDevCommand} aria-label="Developer command box">
+            <input
+              value={devCommand}
+              onChange={(event) => setDevCommand(event.target.value)}
+              placeholder="command"
+              aria-label="Developer command"
+              autoComplete="off"
+              spellCheck="false"
+              disabled={devBusy}
+            />
+            <button type="submit" disabled={devBusy || !devCommand.trim()}>
+              Run
+            </button>
+            {devMessage && <div className="dev-message">{devMessage}</div>}
+          </form>
+        )}
+        <button className="dev-trigger" type="button" aria-expanded={devOpen} onClick={() => setDevOpen((open) => !open)}>
+          dev
+        </button>
       </div>
       <section className="command-panel" aria-labelledby="app-title">
         <div className="masthead">

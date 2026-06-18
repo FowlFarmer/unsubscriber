@@ -7,6 +7,7 @@
 - YouTube/OAuth/quota logic is in `lib/youtube.js`.
 - Monthly subscription fetch endpoint is `POST /api/subscriptions/snapshot`.
 - Delete endpoint is `POST /api/unsubscribe`.
+- Dev command endpoint is `POST /api/dev-command`; valid commands must stay backend-only and require the signed-in Google email `theodorez888@gmail.com`.
 - Legacy `POST /api/preview` intentionally returns `410`; regex filtering happens client-side.
 
 ## Current Product Behavior
@@ -24,6 +25,7 @@
 ## Implementation Constraints
 
 - Do not store subscription metadata in Redis/KV; only quota keys/counters belong there.
+- Do not list or hint dev command names in the client UI; the tiny fixed `dev` box should remain a free-form command sender.
 - Do not reintroduce backend regex preview calls; that would spend YouTube API quota unnecessarily.
 - Keep destructive bulk unsubscribe behind exact-count confirmation.
 - If delete quota is exhausted, keep channel links visible for manual unsubscribe.
